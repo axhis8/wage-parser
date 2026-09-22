@@ -3,7 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 )
+
+const HourlyWage float64 = 12.00
 
 type Shift struct {
 	Line           int     `json:"line"`
@@ -12,31 +16,50 @@ type Shift struct {
 	StartTime      string  `json:"startTime"`
 	EndTime        string  `json:"endTime"`
 	HoursInTime    string  `json:"hoursInTime"`
-	HoursInDecimal float64 `json:"hours"`
+	HoursInDecimal float64 `json:"hoursInDecimal"`
 }
 
 type TotalShift struct {
 	Shifts              []Shift `json:"shifts"`
 	TotalHoursInDecimal float64 `json:"totalHours"`
-	TotalHoursInTime    float64 `json:"totalHoursInTime"`
+	TotalHoursInTime    string  `json:"totalHoursInTime"`
 	EstimatedSalary     float64 `json:"estimatedSalary"`
 }
 
-func main() {
-	s := Shift{
-		Line:           1,
-		Day:            "Montag",
-		Date:           "27.07",
-		StartTime:      "09:50",
-		EndTime:        "13:50",
-		HoursInTime:    "4:00",
-		HoursInDecimal: 4,
+func calcTotalHours(shifts []Shift) float64 {
+	sum := 0.0
+	for i := range shifts {
+		sum += shifts[i].HoursInDecimal
 	}
 
-	jsonData, err := json.MarshalIndent(s, "", "    ")
+	return sum
+}
+
+func getTimeFromDecimal(hours float64) string {
+	hour := int(hours)
+	minutes := int((hours - float64(hour)) * 60)
+
+	return fmt.Sprintf("%02d:%02d", hour, minutes)
+}
+
+func getDecimalFromTime(timeStr string) (float64, error) {
+	parts := strings.Split(timeStr, ":")
+	if len(parts) != 2 {
+		return 0.0, fmt.Errorf("invalid Time Format: %s", timeStr)
+	}
+
+	hours, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return
+		return 0.0, err
 	}
 
-	fmt.Println(string(jsonData))
+	minutes, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0.0, err
+	}
+
+	return float64(hours) + (float64(minutes) / 60.0), nil
+}
+
+func main() {
 }
