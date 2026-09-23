@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const HourlyWage float64 = 12.00
+const hourlyWage float64 = 12.00
 
 type Shift struct {
 	Line           int     `json:"line"`
@@ -53,7 +53,7 @@ func NewShift(line int, day, date, startTime, endTime string) (Shift, error) {
 func NewTotalShift(shifts []Shift) TotalShift {
 	totalHoursInDecimal := calcTotalHours(shifts)
 	totalHoursInTime := getTimeFromDecimal(totalHoursInDecimal)
-	estimatedSalary := totalHoursInDecimal * HourlyWage
+	estimatedSalary := totalHoursInDecimal * hourlyWage
 
 	return TotalShift{
 		Shifts:              shifts,
