@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 func ParseFile(path string) (TotalShift, error) {
@@ -40,11 +41,26 @@ func ParseFile(path string) (TotalShift, error) {
 }
 
 func parseLine(line string, lineNum int) (Shift, error) {
-	var shift Shift
+	var (
+		shift    Shift
+		breakMin int
+	)
 
 	date, day, remainder, err := parseHeader(line)
 	if err != nil {
 		return shift, err
+	}
+
+	start := strings.Index(remainder, "(")
+	end := strings.Index(remainder[start+1:], ")")
+	if start != -1 && end != -1 {
+		breakStr := remainder[start : start+2+end]
+		breakMin, err = parseBreakLine(breakStr)
+		if err != nil {
+			return shift, err
+		}
+
+		remainder = strings.ReplaceAll(remainder, breakStr, "")
 	}
 
 	startTime, endTime, err := splitTimeRange(remainder)
@@ -52,7 +68,7 @@ func parseLine(line string, lineNum int) (Shift, error) {
 		return shift, err
 	}
 
-	shift, err = newShift(lineNum, day, date, startTime, endTime)
+	shift, err = newShift(lineNum, day, date, startTime, endTime, breakMin)
 	if err != nil {
 		return shift, err
 	}
@@ -60,9 +76,17 @@ func parseLine(line string, lineNum int) (Shift, error) {
 	return shift, nil
 }
 
-// TODO: Handle Break
-func parseBreakLine(remainder string) (first, second string, err error) {
-	return first, second, nil
+func parseBreakLine(breakStr string) (int, error) {
+	normalizedBreakStr := breakStr[1 : len(breakStr)-1]
+	normalizedBreakStr = strings.ReplaceAll(normalizedBreakStr, " ", "")
+	normalizedBreakStr = strings.TrimFunc(normalizedBreakStr, unicode.IsLetter)
+
+	breakMin, err := strconv.Atoi(normalizedBreakStr)
+	if err != nil {
+		return breakMin, err
+	}
+
+	return breakMin, nil
 }
 
 func parseHeader(line string) (date, day, remainder string, err error) {

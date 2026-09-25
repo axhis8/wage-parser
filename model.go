@@ -18,16 +18,18 @@ type Shift struct {
 	HoursInTime    string  `json:"hoursInTime"`
 	HoursInDecimal float64 `json:"hoursInDecimal"`
 	HoursInMinutes int     `json:"-"`
+	BreakInMinutes int     `json:"breakInMinutes"`
 }
 
 type TotalShift struct {
 	Shifts              []Shift `json:"shifts"`
 	TotalHoursInDecimal float64 `json:"totalHours"`
 	TotalHoursInTime    string  `json:"totalHoursInTime"`
+	TotalBreakInMinutes int     `json:"totalBreakInMinutes"`
 	EstimatedSalary     float64 `json:"estimatedSalary"`
 }
 
-func newShift(num int, day, date, startTime, endTime string) (Shift, error) {
+func newShift(num int, day, date, startTime, endTime string, breakMin int) (Shift, error) {
 	startTimeDecimal, err := getMinutesFromTime(startTime)
 	if err != nil {
 		return Shift{}, err
@@ -38,7 +40,7 @@ func newShift(num int, day, date, startTime, endTime string) (Shift, error) {
 		return Shift{}, err
 	}
 
-	totalMinutes := endTimeDecimal - startTimeDecimal
+	totalMinutes := (endTimeDecimal - startTimeDecimal) - breakMin
 	totalHoursDecimal := float64(totalMinutes) / 60
 	totalHoursTime := getTimeFromMinutes(totalMinutes)
 
@@ -51,11 +53,13 @@ func newShift(num int, day, date, startTime, endTime string) (Shift, error) {
 		HoursInTime:    totalHoursTime,
 		HoursInDecimal: roundToTwoDecimals(totalHoursDecimal),
 		HoursInMinutes: totalMinutes,
+		BreakInMinutes: breakMin,
 	}, nil
 }
 
 func newTotalShift(shifts []Shift) TotalShift {
-	totalHoursInMinutes := calcTotalHours(shifts)
+	totalHoursInMinutes := calcFieldInt(shifts, func(s Shift) int { return s.HoursInMinutes })
+	totalBreakInMinutes := calcFieldInt(shifts, func(s Shift) int { return s.BreakInMinutes })
 	totalHoursInTime := getTimeFromMinutes(totalHoursInMinutes)
 
 	totalHoursInDecimal := float64(totalHoursInMinutes) / 60
@@ -65,14 +69,15 @@ func newTotalShift(shifts []Shift) TotalShift {
 		Shifts:              shifts,
 		TotalHoursInDecimal: roundToTwoDecimals(totalHoursInDecimal),
 		TotalHoursInTime:    totalHoursInTime,
+		TotalBreakInMinutes: totalBreakInMinutes,
 		EstimatedSalary:     roundToTwoDecimals(estimatedSalary),
 	}
 }
 
-func calcTotalHours(shifts []Shift) int {
+func calcFieldInt(shifts []Shift, field func(Shift) int) int {
 	sum := 0
 	for i := range shifts {
-		sum += shifts[i].HoursInMinutes
+		sum += field(shifts[i])
 	}
 
 	return sum
