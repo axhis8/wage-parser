@@ -8,25 +8,97 @@ import (
 	"strings"
 )
 
-func ParseFile(path string) ([]Shift, error) {
-	var shifts []Shift
+func ParseFile(path string) (TotalShift, error) {
+	var totalShift TotalShift
 
 	file, err := os.Open(path)
 	if err != nil {
-		return shifts, err
+		return totalShift, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		if scanner.Text() == "" {
+			continue
+		}
 
+		shift, err := parseLine(scanner.Text(), len(totalShift.Shifts)+1)
+		if err != nil {
+			return totalShift, err
+		}
+
+		totalShift.Shifts = append(totalShift.Shifts, shift)
 	}
 
 	if err := scanner.Err(); err != nil {
-		return shifts, err
+		return totalShift, err
 	}
 
-	return shifts, nil
+	totalShift = newTotalShift(totalShift.Shifts)
+	return totalShift, nil
+}
+
+func parseLine(line string, lineNum int) (Shift, error) {
+	var shift Shift
+
+	date, day, remainder, err := parseHeader(line)
+	if err != nil {
+		return shift, err
+	}
+
+	startTime, endTime, err := splitTimeRange(remainder)
+	if err != nil {
+		return shift, err
+	}
+
+	shift, err = newShift(lineNum, day, date, startTime, endTime)
+	if err != nil {
+		return shift, err
+	}
+
+	return shift, nil
+}
+
+// TODO: Handle Break
+func parseBreakLine(remainder string) (first, second string, err error) {
+	return first, second, nil
+}
+
+func parseHeader(line string) (date, day, remainder string, err error) {
+	beforeColon, afterColon, found := strings.Cut(line, ":")
+	if !found {
+		return date, day, remainder, fmt.Errorf("invalid header %q", line)
+	}
+
+	beforeLineSplit := strings.Split(beforeColon, " ")
+	if len(beforeLineSplit) != 2 {
+		return date, day, remainder, fmt.Errorf("invalid header %q", line)
+	}
+
+	remainder = afterColon
+	date, day = beforeLineSplit[0], beforeLineSplit[1]
+
+	return date, day, remainder, nil
+}
+
+func splitTimeRange(rangeStr string) (start, end string, err error) {
+	splitStr := strings.Split(rangeStr, "-")
+	if len(splitStr) != 2 {
+		return start, end, fmt.Errorf("invalid range %q", rangeStr)
+	}
+
+	for i := range splitStr {
+		splitStr[i], err = normalizeTimeToken(splitStr[i])
+		if err != nil {
+			return start, end, err
+		}
+	}
+
+	start = splitStr[0]
+	end = splitStr[1]
+
+	return start, end, nil
 }
 
 func normalizeTimeToken(tok string) (string, error) {
@@ -50,10 +122,9 @@ func normalizeTimeToken(tok string) (string, error) {
 		if s := strings.Split(normalizedTok, ":"); len(s[0]) == 1 && len(s[1]) == 2 {
 			return "0" + normalizedTok, nil
 		}
-		return normalizedTok, fmt.Errorf("invalid time token %q", tok)
 	case 5:
 		return normalizedTok, nil
-	default:
-		return normalizedTok, fmt.Errorf("invalid time token %q", tok)
 	}
+
+	return normalizedTok, fmt.Errorf("invalid time token %q", tok)
 }

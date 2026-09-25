@@ -1,8 +1,20 @@
 package main
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 func main() {
-	test, _ := ParseFile("./shifts.txt")
-	fmt.Println(test)
+	totalShifts, err := ParseFile("./shifts.txt")
+	if err != nil {
+		panic(err)
+	}
+
+	data, err := json.MarshalIndent(totalShifts, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(string(data))
 }

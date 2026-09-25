@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -16,6 +17,7 @@ type Shift struct {
 	EndTime        string  `json:"endTime"`
 	HoursInTime    string  `json:"hoursInTime"`
 	HoursInDecimal float64 `json:"hoursInDecimal"`
+	HoursInMinutes int     `json:"-"`
 }
 
 type TotalShift struct {
@@ -25,64 +27,67 @@ type TotalShift struct {
 	EstimatedSalary     float64 `json:"estimatedSalary"`
 }
 
-func NewShift(line int, day, date, startTime, endTime string) (Shift, error) {
-	startTimeDecimal, err := getDecimalFromTime(startTime)
+func newShift(num int, day, date, startTime, endTime string) (Shift, error) {
+	startTimeDecimal, err := getMinutesFromTime(startTime)
 	if err != nil {
 		return Shift{}, err
 	}
 
-	endTimeDecimal, err := getDecimalFromTime(endTime)
+	endTimeDecimal, err := getMinutesFromTime(endTime)
 	if err != nil {
 		return Shift{}, err
 	}
 
-	totalHours := endTimeDecimal - startTimeDecimal
-	totalHoursTime := getTimeFromDecimal(totalHours)
+	totalMinutes := endTimeDecimal - startTimeDecimal
+	totalHoursDecimal := float64(totalMinutes) / 60
+	totalHoursTime := getTimeFromMinutes(totalMinutes)
 
 	return Shift{
-		Line:           line,
+		Line:           num,
 		Day:            day,
 		Date:           date,
 		StartTime:      startTime,
 		EndTime:        endTime,
 		HoursInTime:    totalHoursTime,
-		HoursInDecimal: totalHours,
+		HoursInDecimal: roundToTwoDecimals(totalHoursDecimal),
+		HoursInMinutes: totalMinutes,
 	}, nil
 }
 
-func NewTotalShift(shifts []Shift) TotalShift {
-	totalHoursInDecimal := calcTotalHours(shifts)
-	totalHoursInTime := getTimeFromDecimal(totalHoursInDecimal)
+func newTotalShift(shifts []Shift) TotalShift {
+	totalHoursInMinutes := calcTotalHours(shifts)
+	totalHoursInTime := getTimeFromMinutes(totalHoursInMinutes)
+
+	totalHoursInDecimal := float64(totalHoursInMinutes) / 60
 	estimatedSalary := totalHoursInDecimal * hourlyWage
 
 	return TotalShift{
 		Shifts:              shifts,
-		TotalHoursInDecimal: totalHoursInDecimal,
+		TotalHoursInDecimal: roundToTwoDecimals(totalHoursInDecimal),
 		TotalHoursInTime:    totalHoursInTime,
-		EstimatedSalary:     estimatedSalary,
+		EstimatedSalary:     roundToTwoDecimals(estimatedSalary),
 	}
 }
 
-func calcTotalHours(shifts []Shift) float64 {
-	sum := 0.0
+func calcTotalHours(shifts []Shift) int {
+	sum := 0
 	for i := range shifts {
-		sum += shifts[i].HoursInDecimal
+		sum += shifts[i].HoursInMinutes
 	}
 
 	return sum
 }
 
-func getTimeFromDecimal(hours float64) string {
-	hour := int(hours)
-	minutes := int((hours - float64(hour)) * 60)
+func getTimeFromMinutes(minutes int) string {
+	hours := minutes / 60
 
-	return fmt.Sprintf("%02d:%02d", hour, minutes)
+	return fmt.Sprintf("%02d:%02d", hours, minutes%60)
 }
 
-func getDecimalFromTime(timeStr string) (float64, error) {
-	parts := strings.Split(timeStr, ":")
+func getMinutesFromTime(time string) (int, error) {
+	parts := strings.Split(time, ":")
 	if len(parts) != 2 {
-		return 0.0, fmt.Errorf("invalid Time Format: %s", timeStr)
+		return 0.0, fmt.Errorf("invalid Time Format: %s", time)
 	}
 
 	hours, err := strconv.Atoi(parts[0])
@@ -95,5 +100,9 @@ func getDecimalFromTime(timeStr string) (float64, error) {
 		return 0.0, err
 	}
 
-	return float64(hours) + (float64(minutes) / 60.0), nil
+	return hours*60 + minutes, nil
+}
+
+func roundToTwoDecimals(x float64) float64 {
+	return math.Round(x*100) / 100
 }
