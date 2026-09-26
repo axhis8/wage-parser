@@ -83,7 +83,6 @@ wage-parser/
 │   ├── doc.go            # package doc comment
 │   ├── model.go          # Shift/TotalShift types + calculations
 │   └── parser.go         # text file parsing
-├── shifts.txt              # input data (gitignored, personal)
 └── go.mod
 ```
 
