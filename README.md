@@ -24,6 +24,8 @@ This was my first real Go project. I used it to learn the language hands-on.
 - Optional `(XXmin Break)` for a break, subtracted from the worked time
 - Blank lines are ignored
 
+See [FORMAT.md](FORMAT.md) for the exact parsing rules and edge cases, and [shifts.example.txt](shifts.example.txt) for a ready-to-use sample file.
+
 ## Installation / Usage
 
 ```bash
@@ -94,6 +96,6 @@ wage-parser/
 
 First Go project, so a good chunk of the learning happened here:
 
-- Go's slice semantics (`s[start:end]` is half-open - start inclusive, end exclusive)
+- Go's slice semantics
 - Avoiding floating-point accumulation errors by doing all duration math in integer minutes, converting to decimal hours only at the final display step
 - Structuring a repo as an importable library (`wageparser/`)
