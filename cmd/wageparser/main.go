@@ -3,10 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/axhis8/wage-parser/wageparser"
 )
 
 func main() {
-	totalShifts, err := ParseFile("./shifts.txt")
+	totalShifts, err := wageparser.ParseFile("./shifts.txt", 12)
 	if err != nil {
 		panic(err)
 	}

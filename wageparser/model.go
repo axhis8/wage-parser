@@ -1,4 +1,4 @@
-package main
+package wageparser
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-const hourlyWage float64 = 12.00
-
+// Shift represents a single parsed work shift, including its worked hours,
+// break duration, and time/decimal representations.
 type Shift struct {
 	Line           int     `json:"line"`
 	Day            string  `json:"day"`
@@ -21,6 +21,8 @@ type Shift struct {
 	BreakInMinutes int     `json:"breakInMinutes"`
 }
 
+// TotalShift aggregates a set of Shifts into totals: worked hours, break
+// minutes, and the estimated salary.
 type TotalShift struct {
 	Shifts              []Shift `json:"shifts"`
 	TotalHoursInDecimal float64 `json:"totalHours"`
@@ -57,7 +59,7 @@ func newShift(num int, day, date, startTime, endTime string, breakMin int) (Shif
 	}, nil
 }
 
-func newTotalShift(shifts []Shift) TotalShift {
+func newTotalShift(shifts []Shift, hourlyWage float64) TotalShift {
 	totalHoursInMinutes := calcFieldInt(shifts, func(s Shift) int { return s.HoursInMinutes })
 	totalBreakInMinutes := calcFieldInt(shifts, func(s Shift) int { return s.BreakInMinutes })
 	totalHoursInTime := getTimeFromMinutes(totalHoursInMinutes)

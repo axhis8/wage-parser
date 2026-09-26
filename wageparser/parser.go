@@ -1,4 +1,4 @@
-package main
+package wageparser
 
 import (
 	"bufio"
@@ -9,7 +9,10 @@ import (
 	"unicode"
 )
 
-func ParseFile(path string) (totalShift TotalShift, err error) {
+// ParseFile reads shift data from the text file at path, parses each line,
+// and returns the aggregated totals as a TotalShift, using hourlyWage to
+// calculate the estimated salary.
+func ParseFile(path string, hourlyWage float64) (totalShift TotalShift, err error) {
 	var shifts []Shift
 
 	file, err := os.Open(path)
@@ -36,7 +39,7 @@ func ParseFile(path string) (totalShift TotalShift, err error) {
 		return totalShift, err
 	}
 
-	totalShift = newTotalShift(shifts)
+	totalShift = newTotalShift(shifts, hourlyWage)
 	return totalShift, nil
 }
 
