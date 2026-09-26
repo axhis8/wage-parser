@@ -9,8 +9,8 @@ import (
 	"unicode"
 )
 
-func ParseFile(path string) (TotalShift, error) {
-	var totalShift TotalShift
+func ParseFile(path string) (totalShift TotalShift, err error) {
+	var shifts []Shift
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -24,43 +24,36 @@ func ParseFile(path string) (TotalShift, error) {
 			continue
 		}
 
-		shift, err := parseLine(scanner.Text(), len(totalShift.Shifts)+1)
+		shift, err := parseLine(scanner.Text(), len(shifts)+1)
 		if err != nil {
 			return totalShift, err
 		}
 
-		totalShift.Shifts = append(totalShift.Shifts, shift)
+		shifts = append(shifts, shift)
 	}
 
 	if err := scanner.Err(); err != nil {
 		return totalShift, err
 	}
 
-	totalShift = newTotalShift(totalShift.Shifts)
+	totalShift = newTotalShift(shifts)
 	return totalShift, nil
 }
 
-func parseLine(line string, lineNum int) (Shift, error) {
-	var (
-		shift    Shift
-		breakMin int
-	)
-
+func parseLine(line string, lineNum int) (shift Shift, err error) {
 	date, day, remainder, err := parseHeader(line)
 	if err != nil {
 		return shift, err
 	}
 
-	start := strings.Index(remainder, "(")
-	end := strings.Index(remainder[start+1:], ")")
-	if start != -1 && end != -1 {
-		breakStr := remainder[start : start+2+end]
-		breakMin, err = parseBreakLine(breakStr)
-		if err != nil {
-			return shift, err
-		}
+	remainder, breakStr, err := splitRemainder(remainder)
+	if err != nil {
+		return shift, err
+	}
 
-		remainder = strings.ReplaceAll(remainder, breakStr, "")
+	breakMin, err := parseBreakLine(breakStr)
+	if err != nil {
+		return shift, err
 	}
 
 	startTime, endTime, err := splitTimeRange(remainder)
@@ -69,24 +62,20 @@ func parseLine(line string, lineNum int) (Shift, error) {
 	}
 
 	shift, err = newShift(lineNum, day, date, startTime, endTime, breakMin)
-	if err != nil {
-		return shift, err
-	}
-
-	return shift, nil
+	return shift, err
 }
 
 func parseBreakLine(breakStr string) (int, error) {
+	if breakStr == "" {
+		return 0, nil
+	}
+
 	normalizedBreakStr := breakStr[1 : len(breakStr)-1]
 	normalizedBreakStr = strings.ReplaceAll(normalizedBreakStr, " ", "")
 	normalizedBreakStr = strings.TrimFunc(normalizedBreakStr, unicode.IsLetter)
 
 	breakMin, err := strconv.Atoi(normalizedBreakStr)
-	if err != nil {
-		return breakMin, err
-	}
-
-	return breakMin, nil
+	return breakMin, err
 }
 
 func parseHeader(line string) (date, day, remainder string, err error) {
@@ -123,6 +112,23 @@ func splitTimeRange(rangeStr string) (start, end string, err error) {
 	end = splitStr[1]
 
 	return start, end, nil
+}
+
+// Splits the remainder and break as two strings
+func splitRemainder(remainder string) (cleanRemainder, breakStr string, err error) {
+	start := strings.Index(remainder, "(")
+	end := strings.Index(remainder, ")")
+
+	if start == -1 && end == -1 {
+		return remainder, breakStr, nil
+	} else if start == -1 || end == -1 {
+		return remainder, breakStr, fmt.Errorf("invalid break %q", remainder)
+	}
+
+	breakStr = remainder[start : end+1]
+	cleanRemainder = strings.ReplaceAll(remainder, breakStr, "")
+
+	return cleanRemainder, breakStr, nil
 }
 
 func normalizeTimeToken(tok string) (string, error) {
